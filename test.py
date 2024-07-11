@@ -12,5 +12,7 @@ class Test:
 
 p1 = Test("黄嘉希")
 p2 = Test("石垒")
+p3 = Test("刘锦炼")
 p1.test()
 p2.test()
+p3.test()
