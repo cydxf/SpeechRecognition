@@ -1,9 +1,17 @@
+'''基于百度语音识别API搭建，需要付费'''
+from aip import AipSpeech
 import concurrent.futures
-import speech_recognition as sr
 from pydub import AudioSegment
 from tqdm import tqdm
 import subprocess
 import os
+
+# 百度云语音识别的配置信息
+APP_ID = '102475366'
+API_KEY = 'zL4kxfvmpZTPFD41iVfuKgI3'
+SECRET_KEY = 'T6lufT9Vej6tzHgF4j7WcTpPYpu77W8i'
+
+client = AipSpeech(APP_ID, API_KEY, SECRET_KEY)
 
 
 def extract_audio(file_path):
@@ -16,9 +24,8 @@ def extract_audio(file_path):
     if file_extension == ".wav":
         return file_path
     elif file_extension in [".mp4", ".mp3"]:
-        # 构建 ffmpeg 命令
         command = ['ffmpeg', '-i', file_path, audio_path]
-        print(f"运行命令: {' '.join(command)}")  # 打印命令以供调试
+        print(f"运行命令: {' '.join(command)}")
         try:
             result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             print(result.stdout.decode())
@@ -44,20 +51,16 @@ def transcribe_audio_segment(segment_path):
     """
     将音频片段转换为文本。
     """
-    recognizer = sr.Recognizer()
-
-    with sr.AudioFile(segment_path) as source:
-        audio_data = recognizer.record(source)
-        try:
-            text = recognizer.recognize_google(audio_data, language='zh-CN')
-            return text
-        except sr.UnknownValueError:
-            return "Google 语音识别无法理解音频"
-        except sr.RequestError as e:
-            return f"无法从 Google 语音识别服务请求结果; {e}"
+    with open(segment_path, 'rb') as f:
+        audio_data = f.read()
+    result = client.asr(audio_data, 'wav', 16000, {'dev_pid': 1537})
+    if 'result' in result:
+        return result['result'][0]
+    else:
+        return "百度语音识别无法理解音频"
 
 
-def split_audio(audio_path, segment_length=30000, buffer_length=1000):
+def split_audio(audio_path, segment_length=30000, buffer_length=5000):
     """
     将音频文件分割成较短片段。
     """
