@@ -1,18 +1,19 @@
-class Test:
-    name = " "
+import speech_recognition as sr
 
-    def __init__(self, name):
-        self.name = name
+# 打印库的版本
+print(sr.__version__)
 
-    def test(self):
-        print(self.name)
+# 创建识别器对象
+r = sr.Recognizer()
 
-
-# 建立一个新对象，初始化为自己名字，完成修改并提交
-
-p1 = Test("黄嘉希")
-p2 = Test("石垒")
-p3 = Test("刘锦炼")
-p1.test()
-p2.test()
-p3.test()
+# 尝试读取音频文件
+try:
+    with sr.AudioFile('resource\w6qut-qyd8l.wav') as source:
+        audio = r.record(source)  # 这里可能不需要 record 方法
+        # 使用 Google 识别音频，指定语言为简中
+        result = r.recognize_google_cloud(audio, language='zh-CN')
+        print("Google Speech Recognition thinks you said: " + result)
+except sr.UnknownValueError:
+    print("Google Speech Recognition could not understand the audio")
+except sr.RequestError as e:
+    print(f"Could not request results from Google Speech Recognition service; {e}")
