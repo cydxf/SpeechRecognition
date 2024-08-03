@@ -110,9 +110,9 @@ def on_close(ws, a, b):
 
 
 def process_chunk(chunk_path):
-    wsParam = Ws_Param(APPID='91f7bf93',
-                       APIKey='03d0245a398713654de95df630faaf30',
-                       APISecret='MGI0NGRiNDgxNDAzMjk5ZjZiZTc4NTVk')
+    wsParam = Ws_Param(APPID='',
+                       APIKey='',
+                       APISecret='')
 
     def on_open(ws):
         def run():
