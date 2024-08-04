@@ -56,7 +56,6 @@ class Ws_Param(object):
         }
         # 拼接鉴权参数，生成url
         url = url + '?' + urlencode(v)
-        print('websocket url :', url)
         return url
 
 
@@ -96,7 +95,7 @@ def on_message(ws, message, results):
                 for w in i.get("cw", []):
                     result += w.get("w", "")
             results.append(result)
-            print(f"sid:{sid} call success!,data is:{result}")
+            print(f"{result}")
     except Exception as e:
         print("receive msg,but parse exception:", e)
 
@@ -106,18 +105,18 @@ def on_error(ws, error):
 
 
 def on_close(ws, a, b):
-    print("### closed ###")
+    print("### closed ###")    # 用于区分每个chunk的识别结果，测试完成后可删去print信息，但函数整体删除会报错
 
 
 def process_chunk(chunk_path):
-    wsParam = Ws_Param(APPID='91f7bf93',
-                       APIKey='03d0245a398713654de95df630faaf30',
-                       APISecret='MGI0NGRiNDgxNDAzMjk5ZjZiZTc4NTVk')
+    wsParam = Ws_Param(APPID='',
+                       APIKey='',
+                       APISecret='')
 
     def on_open(ws):
         def run():
             frameSize = 8000  # 每一帧的音频大小
-            interval = 0.04  # 发送音频间隔(单位:s)
+            interval = 0.0001  # 发送音频间隔(单位:s)
             status = STATUS_FIRST_FRAME
 
             with open(chunk_path, "rb") as fp:
@@ -165,8 +164,8 @@ def process_chunk(chunk_path):
 
 if __name__ == "__main__":
     # 音频文件转换
-    input_audio_file = "D:\\SCNU\\Study\\2024_2025Golden_Seed\\Online_video_intelligent_classification_and_annotation_system_based_on_speech_recognition\\Code\\SpeechRecognition\\resource\\mp4\\An_intuitive_understanding_of_neural_network.mp4"
-    output_audio_file = "D:\\SCNU\\Study\\2024_2025Golden_Seed\\Online_video_intelligent_classification_and_annotation_system_based_on_speech_recognition\\Code\\SpeechRecognition\\resource\\wav\\An_intuitive_understanding_of_neural_network.wav"
+    input_audio_file = "D:\\SCNU\\Study\\2024_2025Golden_Seed\\Online_video_intelligent_classification_and_annotation_system_based_on_speech_recognition\\Code\\SpeechRecognition\\resource\\mp4\\讯飞星火Lite讲解2.mp4"
+    output_audio_file = "D:\\SCNU\\Study\\2024_2025Golden_Seed\\Online_video_intelligent_classification_and_annotation_system_based_on_speech_recognition\\Code\\SpeechRecognition\\resource\\wav\\讯飞星火Lite讲解2.wav"
     convert_audio(input_audio_file, output_audio_file)
 
     # 切分音频

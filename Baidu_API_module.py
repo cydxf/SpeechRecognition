@@ -1,13 +1,18 @@
-import requests
+'''基于百度语音识别API搭建，需要付费'''
+from aip import AipSpeech
 import concurrent.futures
 from pydub import AudioSegment
+from tqdm import tqdm
 import subprocess
 import os
 
-# 讯飞星火Lite的配置信息
-API_KEY = '你的API_KEY'
-API_SECRET = '你的API_SECRET'
-URL = 'https://api.xfyun.cn/v1/service/v1/asr'
+# 百度云语音识别的配置信息
+APP_ID = '102475366'
+API_KEY = 'zL4kxfvmpZTPFD41iVfuKgI3'
+SECRET_KEY = 'T6lufT9Vej6tzHgF4j7WcTpPYpu77W8i'
+
+client = AipSpeech(APP_ID, API_KEY, SECRET_KEY)
+
 
 def extract_audio(file_path):
     """
@@ -48,25 +53,11 @@ def transcribe_audio_segment(segment_path):
     """
     with open(segment_path, 'rb') as f:
         audio_data = f.read()
-
-    headers = {
-        'X-Auth-Token': API_KEY,
-        'Content-Type': 'application/json',
-    }
-    params = {
-        'audio_format': 'wav',
-        'sample_rate': 16000
-    }
-    response = requests.post(URL, headers=headers, params=params, files={'file': audio_data})
-
-    if response.status_code == 200:
-        result = response.json()
-        if 'data' in result and 'content' in result['data']:
-            return result['data']['content']
-        else:
-            return "讯飞语音识别无法理解音频"
+    result = client.asr(audio_data, 'wav', 16000, {'dev_pid': 1537})
+    if 'result' in result:
+        return result['result'][0]
     else:
-        return f"语音识别请求失败: {response.text}"
+        return "百度语音识别无法理解音频"
 
 
 def split_audio(audio_path, segment_length=30000, buffer_length=5000):
@@ -103,7 +94,7 @@ def transcribe_long_audio(file_path):
         futures = {executor.submit(transcribe_audio_segment, segment_path): segment_path for segment_path in
                    segment_paths}
 
-        for future in concurrent.futures.as_completed(futures):
+        for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="转换音频片段"):
             transcription += future.result() + " "
 
     # 删除临时片段文件
