@@ -14,6 +14,7 @@ import _thread as thread
 from pydub import AudioSegment
 import os
 from tqdm import tqdm  # 导入tqdm库用于显示进度条
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 STATUS_FIRST_FRAME = 0  # 第一帧的标识
 STATUS_CONTINUE_FRAME = 1  # 中间帧标识
@@ -77,7 +78,7 @@ def split_audio(input_file, output_folder, chunk_length_ms=60000):
         chunk = audio[start_time:end_time]
         chunk.export(os.path.join(output_folder, f"chunk_{i}.wav"), format="wav")
 
-def on_message(ws, message, results):
+def on_message(ws, message, index, results):
     try:
         data = json.loads(message)
         code = data.get("code")
@@ -89,11 +90,18 @@ def on_message(ws, message, results):
             result_data = data.get("data", {}).get("result", {}).get("ws", [])
             result = ""
             for i in result_data:
-                for w in i.get("cw", []):
-                    result += w.get("w", "")
-            results.append(result)
+                if "cw" in i:
+                    for w in i["cw"]:
+                        if "w" in w:
+                            result += w["w"]
+            # 确保 results 列表的长度足够
+            while len(results) <= index:
+                results.append([])
+            # 将结果添加到对应 chunk 的列表中
+            results[index].append(result)
     except Exception as e:
-        print("receive msg,but parse exception:", e)
+        print(f"Exception while processing message: {e}")
+        print(f"Message: {message}")
 
 def on_error(ws, error):
     print("### error:", error)
@@ -102,10 +110,10 @@ def on_close(ws, a, b, chunk_path, progress_bar):
     progress_bar.update(1)
     os.remove(chunk_path)  # 删除音频分片文件
 
-def process_chunk(chunk_path, results, progress_bar):
-    wsParam = Ws_Param(APPID='',  # 输入APPID
-                       APIKey='',  # 输入APIKey
-                       APISecret='')  # 输入APISecret
+def process_chunk(chunk_path, index, results, progress_bar):
+    wsParam = Ws_Param(APPID='91f7bf93',  # 输入APPID
+                       APIKey='03d0245a398713654de95df630faaf30',  # 输入APIKey
+                       APISecret='MGI0NGRiNDgxNDAzMjk5ZjZiZTc4NTVk')  # 输入APISecret
 
     def on_open(ws):
         def run():
@@ -149,7 +157,7 @@ def process_chunk(chunk_path, results, progress_bar):
 
     wsUrl = wsParam.create_url()
     ws = websocket.WebSocketApp(wsUrl,
-                                on_message=lambda ws, msg: on_message(ws, msg, results),
+                                on_message=lambda ws, msg: on_message(ws, msg, index, results),
                                 on_error=on_error,
                                 on_close=lambda ws, a, b: on_close(ws, a, b, chunk_path, progress_bar))
     ws.on_open = on_open
@@ -157,8 +165,8 @@ def process_chunk(chunk_path, results, progress_bar):
 
 if __name__ == "__main__":
     # 音频文件转换
-    input_audio_file = "resource\\mp4\\讯飞星火Lite讲解2.mp4"
-    output_audio_file = "resource\\wav\\讯飞星火Lite讲解2.wav"
+    input_audio_file = "resource\\wav\\An_intuitive_understanding_of_neural_network.wav"
+    output_audio_file = "resource\\wav\\An_intuitive_understanding_of_neural_network_output.wav"
     convert_audio(input_audio_file, output_audio_file)
 
     # 切分音频
@@ -168,24 +176,22 @@ if __name__ == "__main__":
     # 处理每个音频分片
     chunk_files = [os.path.join(output_folder, f"chunk_{i}.wav") for i in range(len(os.listdir(output_folder)))]
 
-    results = []
+    results = []  # 使用列表来存储每个 chunk 的结果
 
     # 创建进度条
     with tqdm(total=len(chunk_files), desc="Processing") as pbar:
-        for chunk_file in chunk_files:
-            process_chunk(chunk_file, results, pbar)
+        with ThreadPoolExecutor(max_workers=50) as executor:
+            future_to_chunk = {executor.submit(process_chunk, chunk_file, index, results, pbar): (chunk_file, index) for index, chunk_file in enumerate(chunk_files)}
+
+            for future in as_completed(future_to_chunk):
+                future.result()
 
     # 等待所有线程完成
     time.sleep(5)  # 确保所有WebSocket连接关闭并更新进度条
 
     # 将结果写入指定路径的txt文件
-    output_txt_file = "resource\\txt\\讯飞星火Lite讲解2.txt"
+    output_txt_file = "resource\\txt\\An_intuitive_understanding_of_neural_network.txt"
     with open(output_txt_file, "w", encoding="utf-8") as f:
-        buffer = ""
-        for result in results:
-            buffer += result
-            if buffer.endswith('。'):
-                f.write(buffer.strip() + '\n')
-                buffer = ""
-        if buffer:
-            f.write(buffer.strip() + '\n')
+        for chunk_result in results:
+            combined_result = ''.join(chunk_result)
+            f.write(combined_result.strip() + '\n')
